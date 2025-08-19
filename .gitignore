@@ -11,6 +11,7 @@ weights
 README.md
 RELEASE_NOTES.md
 ostrack_appl/*.pth
+ostrack_appl/*.pt
 ostrack_appl/single_img_ostrack.py
 TODO.md
 

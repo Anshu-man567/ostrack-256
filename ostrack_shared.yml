@@ -1,0 +1,12 @@
+name: ostrack
+channels:
+  - defaults
+dependencies:
+  - python=3.8
+  - cudatoolkit=10.2
+  - pytorch==2.4.1
+  - torchaudio==2.4.1
+  - torchvision==0.20.0
+  - tqdm
+  - pytorch-cuda=12.4
+prefix: /home/anshu-man567/miniconda3/envs/ostrack

@@ -24,7 +24,7 @@ class VisionTransformerModel(nn.Module):
         patch_size: Size of each image patch
         size_D: Dimension of the input embeddings
         size_N: Number of input tokens (patches)
-        search_size_N: Number of search area tokens
+        search_size_N: Number of search tokens
         tmpl_size_N: Number of template tokens
         num_heads: Number of attention heads in MSA
         hidden_layer_multiplier: Multiplier for hidden layer size in MLP

@@ -27,8 +27,8 @@ class ViTEncoder(nn.Module):
         num_heads: Number of attention heads in MSA
         hidden_layer_multiplier: Multiplier for hidden layer size in MLP
         size_N: Size of input sequence length
-        search_size_N: Size of search area token sequence
-        tmpl_size_N: Size of template token sequence
+        search_size_N: Number of search tokens
+        tmpl_size_N: Number of template tokens
         en_early_cand_elimn: Enable early candidate elimination if True
         early_cand_elimn_ratio: Ratio of tokens to keep in early elimination
         print_stats: Enable printing of debug stats
