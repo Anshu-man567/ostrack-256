@@ -4,14 +4,22 @@ from ostrack.hann import hann2d
 
 from ostrack.frozen_batch_norm import FrozenBatchNorm2d
 
+"""Utility functions for OSTrack Decoder
+
+This module provides utility functions to create single fully connected layers
+and the OSTrackDecoder class which implements the decoder for OSTrack
+
+This function creates a layer with the following operations:
+1. Convolutional layer on the input
+2. Batch normalization layer
+3. ReLU activation function
+"""
 def create_single_fcn_layer(n_in_channels, n_out_channel, kernel_size=3, padding=1, dilation=1, stride=1, freeze_bn=True):
     if freeze_bn is True:
         return nn.Sequential(
-            # TODO (Anshu-man567: Since bn right after this, try with bias=False)
-            # nn.Conv2d(n_in_channels, n_out_channel, kernel_size=kernel_size, stride=stride,
-            #           padding=padding, dilation=dilation, bias=True),
+            # TODO (Anshu-man567): Since bn right after this, try with bias=False)
             nn.Conv2d(n_in_channels, n_out_channel, kernel_size=kernel_size, stride=stride,
-                      padding=padding, dilation=dilation, bias=False),
+                      padding=padding, dilation=dilation, bias=True),
             FrozenBatchNorm2d(n_out_channel),
             nn.ReLU(inplace=True))
     else:
@@ -21,25 +29,36 @@ def create_single_fcn_layer(n_in_channels, n_out_channel, kernel_size=3, padding
             nn.BatchNorm2d(n_out_channel),
             nn.ReLU(inplace=True))
 
+
+"""OSTrack Decoder implementation
+
+This class implements the OSTrack decoder which consists of multiple heads
+to predict classification scores, offsets, and bounding box sizes.
+
+For each of the these predictions, it uses a series of convolutional layers
+to process the input features and produce the final outputs.
+
+The sizes of the output channels vary from 768 -> 256 -> 128 -> 64 -> 32 for each prediction head.
+But the final output channels are:
+1. Classification scores: 1 channel
+2. Offsets: 2 channels (center point's [x, y] coordinates)
+3. Bounding box sizes: 2 channels (width, height)
+"""
 class OSTrackDecoder(nn.Module):
-    def __init__(self, is_cand_elimn_en=False, print_stats=False):
+
+    """Initialize the OSTrack Decoder
+    
+    Args:
+        print_stats: Enable printing of debug stats
+    """
+    def __init__(self, print_stats=False):
         super().__init__()
 
         self.print_stats = print_stats
 
-        if is_cand_elimn_en is True:
-            self.token_padding = None
-        else:
-            # TODO (Anshu-man567): Implement this one!
-            self.token_padding = None
-
+        # TODO (Anshu-man567): Enable varying these sizes depending search image sizes!
         self.feat_sz = float(256 / 16)
-
-        # self.output_window = hann2d(torch.tensor([self.feat_sz, self.feat_sz]).long(), centered=True)
-
-
         self.n_out_channels = [768, 256, 128, 64, 32]
-
         self.size_d = [1, # For classification scores
                        2] # For offset and bounding box sizes
 
@@ -98,6 +117,9 @@ class OSTrackDecoder(nn.Module):
                                     out_channels=self.size_d[1], 
                                     kernel_size=1)
 
+    """
+    Classifier score prediction methods
+    """
     def get_classifier_score(self, input):
         op1 = self.conv1_ctr(input)
         op2 = self.conv2_ctr(op1)
@@ -106,7 +128,10 @@ class OSTrackDecoder(nn.Module):
         op5 = self.conv5_ctr(op4)
 
         return op5
-
+    
+    """
+    Offset prediction method
+    """
     def get_offset(self, input):
         op1 = self.conv1_offset(input)
         op2 = self.conv2_offset(op1)
@@ -116,6 +141,9 @@ class OSTrackDecoder(nn.Module):
 
         return op5
 
+    """
+    Bounding box size prediction method
+    """
     def get_bb_size(self, input):
         op1 = self.conv1_size(input)
         op2 = self.conv2_size(op1)
@@ -125,19 +153,17 @@ class OSTrackDecoder(nn.Module):
 
         return op5
 
+    """
+    Sigmoid function to clamp the output preditions for classification scores and bounding box sizes
+    """
+    def sigmoid(self, x):
+        y = torch.clamp(x.sigmoid_(), min=1e-4, max=1 - 1e-4)
+        return y
+
     def forward(self, input):
-
-        def _sigmoid(x):
-            y = torch.clamp(x.sigmoid_(), min=1e-4, max=1 - 1e-4)
-            return y
-
-        classifier_score = _sigmoid(self.get_classifier_score(input))
-
+        classifier_score = self.sigmoid(self.get_classifier_score(input))
         offset_values = self.get_offset(input)
-        pred_bb_size = _sigmoid(self.get_bb_size(input))
-
-        # TODO (Anshu-man567) : Understand why hann windows and add an option to enable or disable
-        # classifier_score = self.output_window * classifier_score
+        pred_bb_size = self.sigmoid(self.get_bb_size(input))
 
         return classifier_score, pred_bb_size, offset_values
 
@@ -153,106 +179,3 @@ def test_ostrack_decoder():
 
 if __name__ == "__main__":
     test_ostrack_decoder()
-
-
-
-'''
-box_head.conv1_ctr.0.weight 	len: torch.Size([256, 768, 3, 3])
-box_head.conv1_ctr.0.bias 	len: torch.Size([256])
-box_head.conv1_ctr.1.weight 	len: torch.Size([256])
-box_head.conv1_ctr.1.bias 	len: torch.Size([256])
-box_head.conv1_ctr.1.running_mean 	len: torch.Size([256])
-box_head.conv1_ctr.1.running_var 	len: torch.Size([256])
-box_head.conv1_ctr.1.num_batches_tracked 	len: torch.Size([])
-
-box_head.conv2_ctr.0.weight 	len: torch.Size([128, 256, 3, 3])
-box_head.conv2_ctr.0.bias 	len: torch.Size([128])
-box_head.conv2_ctr.1.weight 	len: torch.Size([128])
-box_head.conv2_ctr.1.bias 	len: torch.Size([128])
-box_head.conv2_ctr.1.running_mean 	len: torch.Size([128])
-box_head.conv2_ctr.1.running_var 	len: torch.Size([128])
-box_head.conv2_ctr.1.num_batches_tracked 	len: torch.Size([])
-
-box_head.conv3_ctr.0.weight 	len: torch.Size([64, 128, 3, 3])
-box_head.conv3_ctr.0.bias 	len: torch.Size([64])
-box_head.conv3_ctr.1.weight 	len: torch.Size([64])
-box_head.conv3_ctr.1.bias 	len: torch.Size([64])
-box_head.conv3_ctr.1.running_mean 	len: torch.Size([64])
-box_head.conv3_ctr.1.running_var 	len: torch.Size([64])
-box_head.conv3_ctr.1.num_batches_tracked 	len: torch.Size([])
-
-box_head.conv4_ctr.0.weight 	len: torch.Size([32, 64, 3, 3])
-box_head.conv4_ctr.0.bias 	len: torch.Size([32])
-box_head.conv4_ctr.1.weight 	len: torch.Size([32])
-box_head.conv4_ctr.1.bias 	len: torch.Size([32])
-box_head.conv4_ctr.1.running_mean 	len: torch.Size([32])
-box_head.conv4_ctr.1.running_var 	len: torch.Size([32])
-box_head.conv4_ctr.1.num_batches_tracked 	len: torch.Size([])
-
-box_head.conv5_ctr.weight 	len: torch.Size([1, 32, 1, 1])
-box_head.conv5_ctr.bias 	len: torch.Size([1])
-
-box_head.conv1_offset.0.weight 	len: torch.Size([256, 768, 3, 3])
-box_head.conv1_offset.0.bias 	len: torch.Size([256])
-box_head.conv1_offset.1.weight 	len: torch.Size([256])
-box_head.conv1_offset.1.bias 	len: torch.Size([256])
-box_head.conv1_offset.1.running_mean 	len: torch.Size([256])
-box_head.conv1_offset.1.running_var 	len: torch.Size([256])
-box_head.conv1_offset.1.num_batches_tracked 	len: torch.Size([])
-box_head.conv2_offset.0.weight 	len: torch.Size([128, 256, 3, 3])
-box_head.conv2_offset.0.bias 	len: torch.Size([128])
-box_head.conv2_offset.1.weight 	len: torch.Size([128])
-box_head.conv2_offset.1.bias 	len: torch.Size([128])
-box_head.conv2_offset.1.running_mean 	len: torch.Size([128])
-box_head.conv2_offset.1.running_var 	len: torch.Size([128])
-box_head.conv2_offset.1.num_batches_tracked 	len: torch.Size([])
-box_head.conv3_offset.0.weight 	len: torch.Size([64, 128, 3, 3])
-box_head.conv3_offset.0.bias 	len: torch.Size([64])
-box_head.conv3_offset.1.weight 	len: torch.Size([64])
-box_head.conv3_offset.1.bias 	len: torch.Size([64])
-box_head.conv3_offset.1.running_mean 	len: torch.Size([64])
-box_head.conv3_offset.1.running_var 	len: torch.Size([64])
-box_head.conv3_offset.1.num_batches_tracked 	len: torch.Size([])
-box_head.conv4_offset.0.weight 	len: torch.Size([32, 64, 3, 3])
-box_head.conv4_offset.0.bias 	len: torch.Size([32])
-box_head.conv4_offset.1.weight 	len: torch.Size([32])
-box_head.conv4_offset.1.bias 	len: torch.Size([32])
-box_head.conv4_offset.1.running_mean 	len: torch.Size([32])
-box_head.conv4_offset.1.running_var 	len: torch.Size([32])
-box_head.conv4_offset.1.num_batches_tracked 	len: torch.Size([])
-
-box_head.conv5_offset.weight 	len: torch.Size([2, 32, 1, 1])
-box_head.conv5_offset.bias 	len: torch.Size([2])
-
-box_head.conv1_size.0.weight 	len: torch.Size([256, 768, 3, 3])
-box_head.conv1_size.0.bias 	len: torch.Size([256])
-box_head.conv1_size.1.weight 	len: torch.Size([256])
-box_head.conv1_size.1.bias 	len: torch.Size([256])
-box_head.conv1_size.1.running_mean 	len: torch.Size([256])
-box_head.conv1_size.1.running_var 	len: torch.Size([256])
-box_head.conv1_size.1.num_batches_tracked 	len: torch.Size([])
-box_head.conv2_size.0.weight 	len: torch.Size([128, 256, 3, 3])
-box_head.conv2_size.0.bias 	len: torch.Size([128])
-box_head.conv2_size.1.weight 	len: torch.Size([128])
-box_head.conv2_size.1.bias 	len: torch.Size([128])
-box_head.conv2_size.1.running_mean 	len: torch.Size([128])
-box_head.conv2_size.1.running_var 	len: torch.Size([128])
-box_head.conv2_size.1.num_batches_tracked 	len: torch.Size([])
-box_head.conv3_size.0.weight 	len: torch.Size([64, 128, 3, 3])
-box_head.conv3_size.0.bias 	len: torch.Size([64])
-box_head.conv3_size.1.weight 	len: torch.Size([64])
-box_head.conv3_size.1.bias 	len: torch.Size([64])
-box_head.conv3_size.1.running_mean 	len: torch.Size([64])
-box_head.conv3_size.1.running_var 	len: torch.Size([64])
-box_head.conv3_size.1.num_batches_tracked 	len: torch.Size([])
-box_head.conv4_size.0.weight 	len: torch.Size([32, 64, 3, 3])
-box_head.conv4_size.0.bias 	len: torch.Size([32])
-box_head.conv4_size.1.weight 	len: torch.Size([32])
-box_head.conv4_size.1.bias 	len: torch.Size([32])
-box_head.conv4_size.1.running_mean 	len: torch.Size([32])
-box_head.conv4_size.1.running_var 	len: torch.Size([32])
-box_head.conv4_size.1.num_batches_tracked 	len: torch.Size([])
-
-box_head.conv5_size.weight 	len: torch.Size([2, 32, 1, 1])
-box_head.conv5_size.bias 	len: torch.Size([2])
-'''

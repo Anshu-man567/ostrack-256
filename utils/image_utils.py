@@ -9,6 +9,7 @@ from torchvision.transforms import v2
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
 import sys
+import torch.nn.functional as nnf
 
 
 class ImageUtils():
@@ -135,6 +136,22 @@ class ImageUtils():
 
         return re_sized_img
 
+    def show_ce_out_img_fm_indices(self, layer_idx, search_img, topk_indices_at_layer, img_size):
+        print("top k indices for layer: ", layer_idx, topk_indices_at_layer.shape, topk_indices_at_layer)
+        filter = torch.zeros(size=(self.patch_size, self.patch_size), dtype=torch.uint8)
+        for idx in topk_indices_at_layer:
+            # The below stuff depends on the pytorch conv2d operator projects the patches
+            idx_x = idx // self.patch_size
+            idx_y = idx % self.patch_size
+            filter[idx_x, idx_y] = 1
+
+        # interpolate functions needs [n_batch, n_channels, x_0, x_1] as the input & size as (resz_dim_0 (for x_0), resz_dim_1 (for x_1))
+        resz_filter = nnf.interpolate(filter.unsqueeze(0).unsqueeze(0),
+                                      size=(img_size, img_size)).squeeze(0)
+        print(search_img.shape, resz_filter.shape)
+        self.image_viewer(search_img * resz_filter, "ce_out_" + str(layer_idx+1) + " ct: " + str(len(topk_indices_at_layer)), 1)
+
+# The below functions are only used for testing, no need to fix anything!
 def test_img_utils():
     img_utils = ImageUtils()
     search_image_file_path = "/home/anshu-man567/PycharmProjects/ProjectIdeas/OSTrack/data/got10k/test/GOT-10k_Test_000001/00000091.jpg"
@@ -159,9 +176,10 @@ def parse_gt_bbox(txt_file_path, image_shape, pad=0):
                    gt_box[0]+gt_box[2],
                    gt_box[1]+gt_box[3]]
 
+    # TODO (OPT): Handle padding going out of bounds
     crop_params = [gt_box[1],
                    gt_box[0],
-                   gt_box[2]+pad, # TODO (Anshu-man567) : Handle padding going out of bounds
+                   gt_box[2]+pad,
                    gt_box[3]+pad]
 
     import torch

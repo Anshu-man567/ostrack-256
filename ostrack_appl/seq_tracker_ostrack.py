@@ -13,7 +13,7 @@ from requests.utils import iter_slices
 from ostrack.ostrack_model import OSTrackModel
 from utils.image_parse_lib import ImageParseLib
 from utils.image_utils import ImageUtils
-from ostrack.get_trained_features import GetTrainedFeatures
+from utils.get_trained_features import GetTrainedFeatures
 
 import time
 
@@ -30,56 +30,57 @@ class SeqOSTrack:
                  img_lib=ImageParseLib.TORCHVISION,
                  show_dumps=0,
                  print_stats=0,
-                 en_early_cand_elimn=True):
+                 en_early_cand_elimn=1):
+
         self.exec_mode = exec_mode
         self.img_utils = ImageUtils(img_lib)
         self.show_dumps = show_dumps
         self.print_stats = print_stats
         self.en_early_cand_elimn = en_early_cand_elimn
         self.search_img_dim = search_img_dim
+        self.tmpl_img_dim = tmpl_img_dim
 
         self.template_patch = None
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.ostrack = OSTrackModel(print_stats=self.print_stats,
+        self.ostrack = OSTrackModel(vit_img_dim=vit_img_dim,
+                                    search_img_dim=self.search_img_dim,
+                                    tmpl_img_dim=self.tmpl_img_dim,
+                                    print_stats=self.print_stats,
                                     show_dumps=self.show_dumps,
                                     en_early_cand_elimn=en_early_cand_elimn)
         self.ostrack = self.ostrack.to(self.device)
 
-        # TODO (Anshu-man567): Move this out....
-
-        if self.en_early_cand_elimn:
-            ostrack_trained_wts_file = '../weights/vitb_256_mae_ce_32x4_ep300/OSTrack_ep0300.pth.tar'
-
-            # THE BELOW ONE ACTUALLY GAVE WORSE RESULT IN ONE GOT-10k test with kangaroo and racoon, towards the end, identifies the 2nd racoon as the kangaroo
-            # FROM THE HEATMAPS can confirm that it recognizes the racoon and kangaroo as the object of interest, probably something to do with less training causing transformer to achieve subpar results
-            # TODO (Anshu-man567): Try to figure out why???
-            # ostrack_trained_wts_file = '../weights/vitb_256_mae_ce_32x4_got10k_ep100/OSTrack_ep0100.pth.tar'
-        else:
-            ostrack_trained_wts_file = '../weights/vitb_256_mae_32x4_ep300/OSTrack_ep0300.pth.tar'
-
-        print("Picked weights from path: ", ostrack_trained_wts_file, "EARLY CAND ELIMN is", self.en_early_cand_elimn)
-
-        self.gtf_ostrack = GetTrainedFeatures(ostrack_trained_wts_file)
-
-        if self.print_stats:
-            self.gtf_ostrack.print_model_info(self.backbone)
-            self.gtf_ostrack.print_model_info(self.box_head)
-
-        if self.print_stats:
-            self.gtf_ostrack.print_loaded_model_info()
-
         if exec_mode is TrackExecutionMode.TEST:
+
+            if self.en_early_cand_elimn:
+                ostrack_trained_wts_file = '../weights/vitb_256_mae_ce_32x4_ep300/OSTrack_ep0300.pth.tar'
+
+                # THE BELOW ONE ACTUALLY GAVE WORSE RESULT IN ONE GOT-10k test with kangaroo and racoon, towards the end identifies the 2nd racoon as the kangaroo
+                # FROM THE HEATMAPS can confirm that it recognizes the racoon and kangaroo as the object of interest, probably something to do with less training causing transformer to achieve subpar results
+                # Try to figure out why???
+                # ostrack_trained_wts_file = '../weights/vitb_256_mae_ce_32x4_got10k_ep100/OSTrack_ep0100.pth.tar'
+            else:
+                ostrack_trained_wts_file = '../weights/vitb_256_mae_32x4_ep300/OSTrack_ep0300.pth.tar'
+
+            print("Picked weights from path: ", ostrack_trained_wts_file, "EARLY CAND ELIMN is", self.en_early_cand_elimn)
+
+            self.gtf_ostrack = GetTrainedFeatures(ostrack_trained_wts_file)
+
+            if self.print_stats:
+                self.gtf_ostrack.print_model_info(self.ostrack.backbone)
+                self.gtf_ostrack.print_model_info(self.ostrack.box_head)
+
+            if self.print_stats:
+                self.gtf_ostrack.print_loaded_model_info()
+
             self.ostrack = self.ostrack.eval()
-            ostrack_state_dict, is_exact_copy = self.ostrack.gtf_ostrack.create_new_state_dict(self.ostrack)
+            ostrack_state_dict, is_exact_copy = self.gtf_ostrack.create_new_state_dict(self.ostrack)
             print("Is it an exact copy?", is_exact_copy)
             missing_keys, unexpected_keys = self.ostrack.load_state_dict(ostrack_state_dict, strict=False)
         #
         # elif exec_mode is TrackExecutionMode.TRAIN:
         #     TODO : Implement optimizers, dropout rates and stuff
-
-
-
     
     def init_new_seq(self, tmpl_img_file_path=None, req_resz=False, crop_box=None):
         if tmpl_img_file_path is None:
@@ -119,11 +120,21 @@ class SeqOSTrack:
             output_data[str(iter)]['classifier_score'] = classifier_score_map.squeeze(0).detach().cpu()
             iter += 1
 
-            if self.show_dumps == 1:
-                # transfer to cpu for conversion to numpy
-                self.img_utils.image_viewer(classifier_score_map.squeeze(0).cpu(), "classifer score")
-                self.img_utils.show_bbox_on_img(search_image_path, op_coord, req_resz=True,
-                                                des_img_sz=self.search_img_dim)
+            if self.show_dumps:
+               if self.en_early_cand_elimn:
+                    search_img = self.img_utils.resize_image(self.img_utils.load_image_and_params(search_image_path), des_img_sz=self.search_img_dim)
+
+                    for lim in range(len(self.ostrack.backbone.layer_idx_to_en_early_cand_elimn)):
+                        topk_indices_at_prev_layer = self.ostrack.get_global_topk_indices_fm_layer(lim)
+                        self.img_utils.show_ce_out_img_fm_indices(layer_idx=self.ostrack.backbone.layer_idx_to_en_early_cand_elimn[lim],
+                                                        search_img=search_img,
+                                                        topk_indices_at_layer=topk_indices_at_prev_layer.squeeze(0),
+                                                        img_size=self.ostrack.search_size_N)
+
+               # transfer to cpu for conversion to numpy
+               self.img_utils.image_viewer(classifier_score_map.squeeze(0).cpu(), "classifier score")
+               self.img_utils.show_bbox_on_img(search_image_path, op_coord, req_resz=True,
+                                                        des_img_sz=self.search_img_dim)
 
             print("Done with iteration", iter, "took", time.time() - img_start, "seconds")
 
@@ -144,16 +155,6 @@ class SeqOSTrack:
             return self.track_seq_test_internal(search_image_folder=search_image_folder,
                                                 search_image_paths=search_image_paths,
                                                 req_resz=req_resz)
-
-    # def track_seq_train(self):
-        # TODO (Anshu-man567) : implement
-
-    # def track_seq(self):
-    #     if self.exec_mode == TrackExecutionMode.TEST:
-    #         with torch.no_grad():
-    #             return self.track_seq_test()
-    #
-    #     return None
 
     def parse_gt_bbox_got10k(self, txt_file_path):
         with open(txt_file_path) as file:
@@ -286,7 +287,9 @@ def test_seq_ostrack_got1_dynamic():
 
     seq_ostrack = SeqOSTrack(exec_mode=TrackExecutionMode.TEST,
                              img_lib=ImageParseLib.TORCHVISION,
-                             show_dumps=0)
+                             show_dumps=0,
+                             print_stats=0,
+                             en_early_cand_elimn=1)
     input_img_folder = "/home/anshu-man567/PycharmProjects/ProjectIdeas/OSTrack/data/got10k/test/GOT-10k_Test_000062/"
 
     tmpl_img_file_path = os.path.join(input_img_folder, "00000001.jpg")
@@ -364,6 +367,6 @@ def test_ostrack_blocks():
 
 if __name__ == "__main__":
     # test_seq_ostrack_single()
-    # test_seq_ostrack_got1_dynamic()
-    test_seq_ostrack_got10k(iter_lim=30, show_dumps=1)
+    test_seq_ostrack_got1_dynamic()
+    # test_seq_ostrack_got10k(iter_lim=30, show_dumps=1)
     # show_outputs_from_data("got10k_test_run_results_180.pth", 256)

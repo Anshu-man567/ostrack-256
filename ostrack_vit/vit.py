@@ -8,7 +8,34 @@ from collections import OrderedDict
 from ostrack_vit.input_layer import InputLayer
 from ostrack_vit.transformer import ViTEncoder
 
+"""Vision Transformer Model implementation
+This class implements the Vision Transformer model architecture, including patch embedding,
+positional encoding, and multiple transformer encoder layers.
+
+This module consists of the following layers:
+1. Patch embedding layer to convert input images into patches
+2. Positional encoding layer to add spatial information to patches
+3. Multiple transformer encoder layers for processing the patch embeddings
+"""
 class VisionTransformerModel(nn.Module):
+    
+    """Initialize the Vision Transformer model
+    Args:
+        patch_size: Size of each image patch
+        size_D: Dimension of the input embeddings
+        size_N: Number of input tokens (patches)
+        search_size_N: Number of search area tokens
+        tmpl_size_N: Number of template tokens
+        num_heads: Number of attention heads in MSA
+        hidden_layer_multiplier: Multiplier for hidden layer size in MLP
+        vit_encoder_depth: Number of transformer encoder layers
+        split_pos_embed: If True, splits positional embeddings for template and search regions
+        vit_img_dim: Dimension of the input image for ViT (H and W are assumed to be equal)
+        tmpl_img_dim: Dimension of the template image for ViT (H and W are assumed to be equal)
+        search_img_dim: Dimension of the search image for ViT (H and W are assumed to be equal)
+        en_early_cand_elimn: Enable early candidate elimination if True
+        print_stats: Enable printing of debug stats
+    """
     def __init__(self,
                  patch_size=16,
                  size_D=768,
@@ -70,7 +97,7 @@ class VisionTransformerModel(nn.Module):
         # dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
 
 
-        if self.en_early_cand_elimn is True:
+        if self.en_early_cand_elimn:
             print("EARLY CAND ELIMN is:", self.en_early_cand_elimn)
             self.layer_idx_to_en_early_cand_elimn = [3, 6, 9]    # indices for layers 4, 7, 10
             self.top_k_ratio_for_early_cand_elimn = 0.7          # 0.7 is the keeping ratio in paper
@@ -104,7 +131,7 @@ class VisionTransformerModel(nn.Module):
     def interpolate_patch_pos_embed(self, patch_pos_embed, patch_size, img_dim):
         H, W = img_dim, img_dim
         new_P_H, new_P_W = H // patch_size, W // patch_size
-        print("P H W search", new_P_H, new_P_W)
+
         patch_pos_embed = nn.functional.interpolate(patch_pos_embed,
                                                     size=(new_P_H, new_P_W),
                                                     mode='bicubic',
@@ -114,23 +141,6 @@ class VisionTransformerModel(nn.Module):
 
     # TODO : Fix this and add support for proper inputs, check out DataLoader and Dataset
     def forward(self, patches):
-
-        # B, _v1 = patches.shape
-        # print("I am here : ", patches.shape)
-
-        ## NEED THE BELOW FOR VIT:
-        # B = 1
-        # patches = patches.reshape([B, self.size_N,  self.size_D])
-        # # print(self.pos_embed[0,1:,:].shape)
-        # patches = patches + self.pos_embed[0,1:,:]
-
-        # The OG implementation use this, idk what diff
-        # TODO (anshu-man567): Figure out why this
-        # for i, blk in enumerate(self.blocks):
-        #     patches = blk(patches)
-        #
-        # vit_output = self.norm(patches)
-
         vit_output = self.norm(self.blocks(patches))
 
         return vit_output

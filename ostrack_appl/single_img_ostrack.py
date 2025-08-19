@@ -36,17 +36,17 @@ def test_ostrack_blocks():
     #     x = ostrack.try_on_input_tokens(search_img_file_path=search_image_file_path,
     #                                     template_img_file_path=template_image_file_patch)
 
-    # TODO (Anshu-man567) : Check if you need .no_grad() with .eval()??
-    # with torch.no_grad():
-    ostrack_state_dict, is_exact_copy = ostrack.gtf_ostrack.create_new_state_dict(ostrack)
-    print("Is it an exact copy?", is_exact_copy)
 
-    missing_keys, unexpected_keys = ostrack.load_state_dict(ostrack_state_dict, strict=False)
+    with torch.no_grad():
+        ostrack_state_dict, is_exact_copy = ostrack.gtf_ostrack.create_new_state_dict(ostrack)
+        print("Is it an exact copy?", is_exact_copy)
 
-    # ostrack.gtf_ostrack.print_model_info(ostrack)
+        missing_keys, unexpected_keys = ostrack.load_state_dict(ostrack_state_dict, strict=False)
 
-    x = ostrack.try_on_input_tokens(search_img_file_path=search_image_file_path,
-                                    template_img_file_path=template_image_file_patch)
+        # ostrack.gtf_ostrack.print_model_info(ostrack)
+
+        x = ostrack.try_on_input_tokens(search_img_file_path=search_image_file_path,
+                                        template_img_file_path=template_image_file_patch)
 
 
 if __name__ == "__main__":

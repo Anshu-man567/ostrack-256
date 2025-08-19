@@ -5,13 +5,12 @@ ostrack_vit/archived
 */__pycache__
 test_image
 vit
-vit/archived
-vit/test_image
 ostrack_vit/test_image
 documents
 weights
 README.md
 RELEASE_NOTES.md
 ostrack_appl/*.pth
-
+ostrack_appl/single_img_ostrack.py
+TODO.md
 

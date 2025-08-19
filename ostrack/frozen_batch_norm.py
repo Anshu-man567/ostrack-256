@@ -1,6 +1,6 @@
 import torch
 
-
+# TODO (Anshu-man567): Improve notes and mention why this was reqd
 class FrozenBatchNorm2d(torch.nn.Module):
     """
     BatchNorm2d where the batch statistics and the affine parameters are fixed.
