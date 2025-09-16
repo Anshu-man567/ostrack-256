@@ -12,5 +12,6 @@ documents/README.md
 documents/RELEASE_NOTES.md
 documents/TODO.md
 ostrack_appl/*.pth
+ostrack_appl/archived
 ostrack_appl/*.pt
 ostrack_appl/single_img_ostrack.py
