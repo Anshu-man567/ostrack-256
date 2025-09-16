@@ -39,7 +39,7 @@ Below is the detailed design covering the OSTrack-256 variant (but for the most 
 ### Input Processing
 Before passing the patches to transformer backbone, the following steps takes place:
 
-###### 1. Creating the patches
+##### 1. Creating the patches
 The template and search images are split into two groups of patches of size 16x16 pixels, each. Next, these patch groups are linearly embedded with the same weights.
 
 ##### 2. Adding the Position Embeddings
