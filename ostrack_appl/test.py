@@ -14,7 +14,11 @@ def test_seq_ostrack_got10k(cli_args, iter_lim=-1):
                              img_lib=ImageParseLib.TORCHVISION,
                              show_dumps=cli_args.show_dumps,
                              print_stats=cli_args.print_stats,
-                             en_early_cand_elimn=cli_args.en_ece)
+                             en_early_cand_elimn=cli_args.en_ece,
+                             search_img_dim=cli_args.search_size,
+                             tmpl_img_dim=cli_args.template_size,
+                             size_D=cli_args.hidden_dim,
+                             pretrained_weights=cli_args.pretrained_weights)
 
     got10k_test_dir = "/home/anshu-man567/PycharmProjects/ProjectIdeas/OSTrack/data/got10k/test/"
     full_out_data = OrderedDict()
@@ -76,16 +80,22 @@ def test_seq_ostrack_got1_dynamic(cli_args):
     38 => some angel fish?
     52 => bullock cart battles
     90 => is the weirdest I cant comprehend
-    62 => kangaroo fights with another animal (forgot its name) c for combat :)
+    62 => kangaroo fights with another animal (forgot its name)
     43 => another kangaroo running, but couldnt track it due to occlusion of the same color
     45 => template so smol, even I cant detect it
+    62 +> kangaroo fights with a racoon
     '''
 
     seq_ostrack = SeqOSTrack(exec_mode=TrackExecutionMode.TEST,
                              img_lib=ImageParseLib.TORCHVISION,
                              show_dumps=cli_args.show_dumps,
+                             save_outputs=cli_args.save_outputs,
                              print_stats=cli_args.print_stats,
-                             en_early_cand_elimn=cli_args.en_ece)
+                             en_early_cand_elimn=cli_args.en_ece,
+                             search_img_dim=cli_args.search_size,
+                             tmpl_img_dim=cli_args.template_size,
+                             size_D=cli_args.hidden_dim,
+                             pretrained_weights=cli_args.pretrained_weights)
     input_img_folder = "/home/anshu-man567/PycharmProjects/ProjectIdeas/OSTrack/data/got10k/test/GOT-10k_Test_000062/"
 
     tmpl_img_file_path = os.path.join(input_img_folder, "00000001.jpg")

@@ -1,0 +1,11 @@
+# Model parameters
+hidden_dim: 768
+search_size: 256
+template_size: 128
+
+# Runtime parameters
+show_dumps: 0
+save_outputs: 0
+print_stats: 0
+en_ece: 1
+pretrained_weights:  '' # "weights/vitb_256_mae_ce_32x4_ep300/OSTrack_ep0300.pth.tar" # This path is relative to the project root

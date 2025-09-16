@@ -51,11 +51,11 @@ class PostProcessUtils(nn.Module):
 
         pred_boxes = self.cal_bbox(response, size_map, offset_map)
         pred_boxes = pred_boxes.view(-1, 4)
-        pred_box = (pred_boxes.mean(
-            dim=0) * self.side_len ).tolist()  # (cx, cy, w, h) [0,1]
+        pred_box = (pred_boxes.mean(dim=0) * self.side_len ).tolist()  # (cx, cy, w, h) [0,1]
 
         bbox = pred_box
 
+        # Calculate the x,y coordinates of the top left, and the bottom right corner
         processed_bbox = [int(bbox[0] - (0.5 * bbox[2])), int(bbox[1] - (0.5 * bbox[3])),
                           int(bbox[0] + (0.5 * bbox[2])), int(bbox[1] + (0.5 * bbox[3]))]
 
