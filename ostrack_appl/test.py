@@ -35,7 +35,7 @@ def test_seq_ostrack_got10k(cli_args, iter_lim=-1):
         print(tmpl_img_file_path, txt_path, search_image_folder_path)
         image = seq_ostrack.img_utils.load_image_and_params(tmpl_img_file_path)
         bbox, crop = seq_ostrack.parse_gt_bbox_got10k(txt_path)
-        seq_ostrack.img_utils.show_bbox_on_img(tmpl_img_file_path, bbox_coords=bbox)
+        seq_ostrack.img_utils.show_bbox_on_img(tmpl_img_file_path, bbox_coords=bbox, str="tmpl_img")
         seq_ostrack.init_new_seq(tmpl_img_file_path=tmpl_img_file_path, req_resz=True, crop_box=crop)
 
         full_out_data['folders'][str(iter)] = folder
@@ -78,12 +78,11 @@ def test_seq_ostrack_got1_dynamic(cli_args):
     03 => blue boat
     23 => driffffffffting
     38 => some angel fish?
-    52 => bullock cart battles
-    90 => is the weirdest I cant comprehend
-    62 => kangaroo fights with another animal (forgot its name)
     43 => another kangaroo running, but couldnt track it due to occlusion of the same color
     45 => template so smol, even I cant detect it
-    62 +> kangaroo fights with a racoon
+    52 => bullock cart battles
+    62 => kangaroo fights with a racoon
+    90 => is the weirdest I cant comprehend
     '''
 
     seq_ostrack = SeqOSTrack(exec_mode=TrackExecutionMode.TEST,
@@ -96,7 +95,7 @@ def test_seq_ostrack_got1_dynamic(cli_args):
                              tmpl_img_dim=cli_args.template_size,
                              size_D=cli_args.hidden_dim,
                              pretrained_weights=cli_args.pretrained_weights)
-    input_img_folder = "/home/anshu-man567/PycharmProjects/ProjectIdeas/OSTrack/data/got10k/test/GOT-10k_Test_000062/"
+    input_img_folder = "/home/anshu-man567/PycharmProjects/ProjectIdeas/OSTrack/data/got10k/test/GOT-10k_Test_000023/"
 
     tmpl_img_file_path = os.path.join(input_img_folder, "00000001.jpg")
     txt_path = os.path.join(input_img_folder, "groundtruth.txt")

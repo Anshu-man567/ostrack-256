@@ -4,7 +4,7 @@ search_size: 256
 template_size: 128
 
 # Runtime parameters
-show_dumps: 0
+show_dumps: 1
 save_outputs: 0
 print_stats: 0
 en_ece: 1

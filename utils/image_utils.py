@@ -1,3 +1,4 @@
+import os
 import torch
 import torchvision
 import cv2 as cv
@@ -13,10 +14,12 @@ import torch.nn.functional as nnf
 
 
 class ImageUtils():
-    def __init__(self, side_length=256, patch_size=16, img_lib=ImageParseLib.TORCHVISION, print_stats=0):
+    def __init__(self, side_length=256, patch_size=16, img_lib=ImageParseLib.TORCHVISION, print_stats=0, need_to_save_out=0, save_path=os.path.abspath(os.getcwd())):
         self.img_lib = img_lib
         self.debug_flag = print_stats
         self.patch_size = patch_size
+        self.need_to_save_out = need_to_save_out
+        self.save_path = save_path
 
     def step_size(self):
         return self.patch_size
@@ -149,7 +152,7 @@ class ImageUtils():
         resz_filter = nnf.interpolate(filter.unsqueeze(0).unsqueeze(0),
                                       size=(img_size, img_size)).squeeze(0)
         print(search_img.shape, resz_filter.shape)
-        self.image_viewer(search_img * resz_filter, "ce_out_" + str(layer_idx+1) + " ct: " + str(len(topk_indices_at_layer)), 1)
+        # self.image_viewer(search_img * resz_filter, "ce_out_" + str(layer_idx+1) + " ct: " + str(len(topk_indices_at_layer)), 1)
 
 # The below functions are only used for testing, no need to fix anything!
 def test_img_utils():

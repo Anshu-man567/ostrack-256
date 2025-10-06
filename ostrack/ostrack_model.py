@@ -267,7 +267,7 @@ class OSTrackModel(nn.Module):
             if crop_box is not None:
                 tmpl_img = self.img_utils.crop_image(tmpl_img, crop_box[0], crop_box[1], crop_box[2], crop_box[3])
             tmpl_img = self.img_utils.resize_image(tmpl_img, self.tmpl_img_dim)
-        self.img_utils.image_viewer(tmpl_img, "tmpl_img 222 ")
+        self.img_utils.image_viewer(tmpl_img, "cropped_tmpl_img")
         template_patches = self.preprocessor.process(tmpl_img)
         if self.print_stats:
             print("template patches", template_patches.shape)
@@ -300,7 +300,7 @@ class OSTrackModel(nn.Module):
         search_img = self.img_utils.load_image_and_params(search_img_file_path)
         if req_resz is not False:
             search_img = self.img_utils.resize_image(search_img, self.search_img_dim)
-
+        self.img_utils.image_viewer(search_img, "input_search_img", self.show_dumps)
         search_patches = self.preprocessor.process(search_img)
         if self.print_stats:
             print("search patches", search_patches.shape)
