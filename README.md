@@ -12,8 +12,8 @@ Typically, frameworks first perform feature extraction on the template and searc
 Unlike other frameworks that segregate these two steps, OSTrack leverages the transformer architecture to combine these steps into one.
 
 Sample outputs are shown below, from left to right: 
-1. Input Search Image (from iteration 60–100)
-2. Input Template Image (from iteration 1) 
+1. Input Search Image
+2. Input Template Image
 3. Remaining search image tokens after layer 4, 7, 10
 4. Classifier Score Output (as a heatmap, from purple(tends to 0) to yellow(tends to 1))
 5. Final output image with the bounding box
